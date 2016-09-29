@@ -7,11 +7,26 @@ This file creates your application.
 """
 
 import os
-from flask import Flask, render_template, request, redirect, url_for
+import pickle
+import pandas as pd
+from pymongo import MongoClient, ASCENDING
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from datetime import datetime
+
+import tools
 
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'this_should_be_configured')
+client = MongoClient()
+db = client.log
+
+apiKey= os.environ.get('API_KEY')
+allowedIPsFile = "allowedips.p"
+
+if os.path.isfile(allowedIPsFile):
+    allowedIPs = pickle.load( open( allowedIPsFile, "rb" ) )
+else:
+    allowedIPs = []
 
 
 ###
@@ -39,6 +54,41 @@ def send_text_file(file_name):
     """Send your static text file."""
     file_dot_text = file_name + '.txt'
     return app.send_static_file(file_dot_text)
+
+
+@app.route('/event')
+def event():
+    """Saves an event on the database."""
+    pid = request.args.get('pid')
+    event = request.args.get('event')
+    date = datetime.now()
+    eventDoc = {"pid":pid, "event":event, "date":date}
+    db.events.insert(eventDoc)
+    return jsonify({'success':"True"}), 200
+
+@app.route('/allowIP')
+def allowIP():
+    """Adds an IP in the allowed list to send events"""
+    sent_apikey = request.args.get('apikey')
+    if sent_apikey == apiKey:
+        allowedIPs.append(request.remote_addr)
+        pickle.dump( allowedIPs, open( allowedIPsFile, "wb" ) )
+    return jsonify({'ip': request.remote_addr}), 200
+
+
+@app.route('/timeline')
+def timeline():
+    pid = request.args.get('pid')
+    event = request.args.get('event')
+    period = request.args.get('period')
+    if event:
+        log = list(db.events.find({"event":event, "pid":pid}).sort("date", ASCENDING))
+    else:
+        log = list(db.events.find({"pid":pid}).sort("date", ASCENDING))
+        event = "all"
+    aggregatedLog = tools.aggregate_time(period,log)
+    responseDict = {"event":event, "pid":pid, "log":aggregatedLog}
+    return jsonify(responseDict), 200
 
 
 @app.after_request
