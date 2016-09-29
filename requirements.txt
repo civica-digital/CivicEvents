@@ -3,6 +3,8 @@
 # ----------------------
 flask
 pymongo
+pickle
+datetime
 
 # ----------------------
 # Testing

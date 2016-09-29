@@ -8,7 +8,6 @@ This file creates your application.
 
 import os
 import pickle
-import pandas as pd
 from pymongo import MongoClient, ASCENDING
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from datetime import datetime
@@ -78,6 +77,7 @@ def allowIP():
 
 @app.route('/timeline')
 def timeline():
+    """Shows the timeline of events registered on such projects"""
     pid = request.args.get('pid')
     event = request.args.get('event')
     period = request.args.get('period')
