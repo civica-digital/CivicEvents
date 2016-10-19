@@ -32,14 +32,19 @@ else:
 # Routing for your application.
 ###
 
-@app.route('/event')
-def event():
+# Example request
+#import requests
+#res = requests.post('http://localhost:5000/event/1234', json={"mytext":"lalala"})
+#if res.ok:
+#    print res.json()
+
+@app.route('/event/<pid>', methods=['GET', 'POST'])
+def event(pid):
     """Saves an event on the database."""
-    pid = request.args.get('pid')
-    event = request.args.get('event')
-    date = datetime.now()
-    eventDoc = {"pid":pid, "event":event, "date":date}
-    db.events.insert(eventDoc)
+    content = request.json
+    content["created_at"] = datetime.now()
+    content["pid"] = pid
+    db.events.insert(content)
     return jsonify({'success':"True"}), 200
 
 @app.route('/allowIP')
